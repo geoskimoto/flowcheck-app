@@ -1,0 +1,54 @@
+name: flowcheck
+description: "River conditions app for recreationists — USGS streamflow gauge map, water year charts, and flood alerts."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.11.5
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Navigation
+  go_router: ^14.0.0
+
+  # State management
+  flutter_riverpod: ^2.6.1
+  riverpod_annotation: ^2.6.1
+
+  # Map
+  flutter_map: ^8.0.0
+  latlong2: ^0.9.1
+
+  # Charts
+  fl_chart: ^0.70.0
+
+  # HTTP client
+  dio: ^5.7.0
+
+  # Auth token storage
+  flutter_secure_storage: ^9.2.4
+
+  # Push notifications
+  firebase_core: ^3.10.0
+  firebase_messaging: ^15.2.4
+
+  # Local preferences
+  shared_preferences: ^2.3.3
+
+  # Icons
+  cupertino_icons: ^1.0.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  build_runner: ^2.4.13
+  riverpod_generator: ^2.6.1
+  mocktail: ^1.0.4
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/
