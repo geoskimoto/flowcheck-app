@@ -1,4 +1,4 @@
-# flowcheck
+# streamcast
 
 A new Flutter project.
 

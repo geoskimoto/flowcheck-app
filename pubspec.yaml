@@ -1,4 +1,4 @@
-name: flowcheck
+name: streamcast
 description: "River conditions app for recreationists — USGS streamflow gauge map, water year charts, and flood alerts."
 publish_to: 'none'
 version: 1.0.0+1

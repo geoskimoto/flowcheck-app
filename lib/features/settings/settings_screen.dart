@@ -36,7 +36,7 @@ class SettingsScreen extends ConsumerWidget {
         const _SectionHeader('About'),
         ListTile(
           leading: const Icon(Icons.info_outline),
-          title: const Text('FlowCheck'),
+          title: const Text('StreamCast'),
           subtitle: const Text('v1.0.0 • USGS streamflow data'),
         ),
         ListTile(

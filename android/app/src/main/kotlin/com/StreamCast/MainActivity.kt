@@ -1,4 +1,4 @@
-package com.geoskimoto.flowcheck
+package com.StreamCast
 
 import io.flutter.embedding.android.FlutterActivity
 

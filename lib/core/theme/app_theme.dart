@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flowcheck/core/models/station.dart';
+import 'package:streamcast/core/models/station.dart';
 
 class AppTheme {
   static ThemeData get dark => ThemeData(

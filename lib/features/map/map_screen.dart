@@ -72,7 +72,7 @@ class _BaseMap extends StatelessWidget {
         children: [
           TileLayer(
             urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-            userAgentPackageName: 'com.geoskimoto.flowcheck',
+            userAgentPackageName: 'com.StreamCast',
           ),
           MarkerLayer(markers: markers),
         ],

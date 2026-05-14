@@ -54,7 +54,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> with SingleTickerProvid
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Sign in to FlowCheck'),
+        title: const Text('Sign in to StreamCast'),
         bottom: TabBar(
           controller: _tabs,
           tabs: const [Tab(text: 'Sign In'), Tab(text: 'Register')],

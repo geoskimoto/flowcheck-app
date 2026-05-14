@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "288276099393",
+    "project_id": "streamcast-2df58",
+    "storage_bucket": "streamcast-2df58.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:288276099393:android:1b27ef4f52835c5badf1c0",
+        "android_client_info": {
+          "package_name": "com.StreamCast"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDJvTD8deh05c4jFmeB0d30htb4FEC2R-g"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

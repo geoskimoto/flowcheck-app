@@ -1,12 +1,16 @@
-# flowcheck-app — Claude Context
+# StreamCast (flowcheck-app) — Claude Context
 
 ## What This Is
 Flutter mobile app for river recreationists (kayakers, boaters, fishermen). Shows USGS gauge
 stations on an interactive map colored by flow condition, displays water year percentile band
 charts per station, and sends push notifications when subscribed stations hit flood stage (≥95th pct).
 
+**Branding:** App is branded as **StreamCast** (Android package `com.StreamCast`, Dart package
+`streamcast`, root widget `StreamCastApp`). The repo directory and API host are still named
+`flowcheck-app` / `flowcheck-api.3rdplaces.io` — historical, not renamed.
+
 ## Tech Stack
-- **Flutter 3.41.9** at `/home/geoskimoto/flutter/`
+- **Flutter 3.41.9** at `/home/mrguy/flutter/`
 - **Riverpod** (flutter_riverpod ^2.6.1) — state management
 - **go_router** — navigation with ShellRoute bottom tabs
 - **flutter_map** + OpenStreetMap tiles — gauge map
@@ -17,9 +21,9 @@ charts per station, and sends push notifications when subscribed stations hit fl
 
 ## Building
 ```bash
-export ANDROID_HOME=/home/geoskimoto/android-sdk
-export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-cd /home/geoskimoto/projects/flowcheck-app
+export ANDROID_HOME=/home/mrguy/android-sdk
+export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64
+cd /home/mrguy/projects/flowcheck-app
 
 # Debug APK (sideload for testing)
 flutter build apk --debug
@@ -33,14 +37,14 @@ flutter build apk --debug --dart-define=API_BASE_URL=https://flowcheck-api.3rdpl
 
 ## Running Flutter Analyze
 ```bash
-sudo -u geoskimoto env HOME=/home/geoskimoto PATH="/home/geoskimoto/flutter/bin:$PATH" flutter analyze
+flutter analyze
 ```
 Must be 0 errors before building.
 
 ## API Config
-- `lib/core/config.dart` — `apiBaseUrl` defaults to `http://10.0.2.2:8052` (Android emulator alias for localhost)
-- Override at build time: `--dart-define=API_BASE_URL=https://flowcheck-api.3rdplaces.io`
-- Update the default once DNS + SSL is live for `flowcheck-api.3rdplaces.io`
+- `lib/core/config.dart` — `apiBaseUrl` defaults to `https://flowcheck-api.3rdplaces.io` (production)
+- Override at build time for local API testing: `--dart-define=API_BASE_URL=http://10.0.2.2:8052`
+  (`10.0.2.2` is the Android emulator alias for the host's localhost)
 
 ## Project Structure
 ```
@@ -85,25 +89,18 @@ lib/
 | flood | vermilion | #D55E00 |
 
 ## Firebase Setup Status
-- `google-services.json` → `android/app/google-services.json` — **STILL NEEDED**
+- `android/app/google-services.json` ✓ placed
 - Google Services Gradle plugin wired into `settings.gradle.kts` + `app/build.gradle.kts` ✓
 - FCM service declared in `AndroidManifest.xml` ✓
-- `flutterfire_cli` installed globally at `/home/geoskimoto/.pub-cache/bin/flutterfire` ✓
-- `firebase-tools` CLI installed (v15.16.0) ✓
-- `lib/firebase_options.dart` — **NOT YET GENERATED** (needs `flutterfire configure`)
-- Run after placing `google-services.json`:
-  ```bash
-  firebase login
-  cd /home/geoskimoto/projects/flowcheck-app
-  /home/geoskimoto/.pub-cache/bin/flutterfire configure \
-    --project=<firebase-project-id> --platforms=android
-  ```
+- `lib/firebase_options.dart` ✓ generated via `flutterfire configure`
+- `firebase.json` ✓ present at repo root
+- Outstanding: Firebase service account JSON → place on VPS → set in API `.env` (server-side push)
 
 ## Android Signing (Release)
 - Debug APK builds work (signed with debug key) ✓
 - Release signing not yet configured
 - Steps:
-  1. `keytool -genkey -v -keystore ~/flowcheck-release.jks -alias flowcheck -keyalg RSA -keysize 2048 -validity 10000`
+  1. `keytool -genkey -v -keystore ~/streamcast-release.jks -alias streamcast -keyalg RSA -keysize 2048 -validity 10000`
   2. Create `android/key.properties` with storeFile/storePassword/keyAlias/keyPassword
   3. Reference in `android/app/build.gradle.kts` release signingConfig
 
@@ -111,9 +108,8 @@ lib/
 - `fl_chart ^0.70` uses `barWidth` on `LineChartBarData`, NOT `strokeWidth`
 
 ## What's NOT Done Yet
-1. `google-services.json` → place file → run `flutterfire configure` → generates `firebase_options.dart`
-2. Firebase service account JSON → place on VPS → set in API `.env`
-3. DNS + SSL for `flowcheck-api.3rdplaces.io` → update default `apiBaseUrl` in config.dart
-4. Release APK signing setup
-5. Current water-year data overlay on chart (needs new API endpoint)
-6. Play Store submission (icons, listing, privacy policy)
+1. Firebase service account JSON → place on VPS → set in API `.env` (server-side FCM send)
+2. Release APK signing setup (keystore + `android/key.properties` + gradle wiring)
+3. Current water-year data overlay on chart (needs new API endpoint)
+4. Play Store submission (icons, listing, privacy policy)
+5. Verify DNS + SSL is actually live for `flowcheck-api.3rdplaces.io` (default now points there)

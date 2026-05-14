@@ -11,11 +11,11 @@ import 'firebase_options.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  runApp(const ProviderScope(child: FlowCheckApp()));
+  runApp(const ProviderScope(child: StreamCastApp()));
 }
 
-class FlowCheckApp extends ConsumerWidget {
-  const FlowCheckApp({super.key});
+class StreamCastApp extends ConsumerWidget {
+  const StreamCastApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -29,7 +29,7 @@ class FlowCheckApp extends ConsumerWidget {
     });
 
     return MaterialApp.router(
-      title: 'FlowCheck',
+      title: 'StreamCast',
       theme: AppTheme.dark,
       routerConfig: router,
       debugShowCheckedModeBanner: false,
