@@ -19,6 +19,19 @@ charts per station, and sends push notifications when subscribed stations hit fl
 - **firebase_messaging** — FCM push notifications
 - **flutter_secure_storage** — JWT token storage
 
+## Dev Environment
+- Host is a **VMware VM (Ubuntu 24.04 "noble")** with **no nested virtualization** — `/dev/kvm`
+  is absent and CPU flags lack `vmx`/`svm`. The **Android emulator is not practical here**;
+  use a real phone over USB (see "Sideloading & Hot-Reload Iteration" below).
+- `JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64` must be a **full JDK**, not the JRE. If a
+  fresh install only has `java` but not `javac`, install: `sudo apt install -y openjdk-21-jdk-headless`
+  (headless is fine — Android builds don't need GUI components).
+- **DNS quirk:** the VMware NAT DNS (`192.168.128.2`) intermittently returns SERVFAIL for
+  `*.ubuntu.com` mirrors while resolving other hosts fine. Workaround if apt breaks:
+  temporarily add `/etc/apt/sources.list.d/kernel-mirror.list` pointing at
+  `http://mirrors.kernel.org/ubuntu/` (noble + noble-updates + noble-security, main + universe),
+  apt update + install, then remove the file.
+
 ## Building
 ```bash
 export ANDROID_HOME=/home/mrguy/android-sdk
@@ -33,6 +46,15 @@ flutter build appbundle --release
 
 # With production API URL
 flutter build apk --debug --dart-define=API_BASE_URL=https://flowcheck-api.3rdplaces.io
+```
+
+**Gotcha: stale Gradle daemon.** If a build fails with
+`Toolchain installation '/usr/lib/jvm/...' does not provide the required capabilities: [JAVA_COMPILER]`
+even though `javac` clearly exists on disk, a long-running Gradle daemon has cached an
+earlier (JRE-only) probe result. Stop it before retrying:
+```bash
+cd android && ./gradlew --stop && cd ..
+# Or force-kill: pkill -9 -f GradleDaemon
 ```
 
 ## Running Flutter Analyze
@@ -107,9 +129,54 @@ lib/
 ## Known fl_chart API Note
 - `fl_chart ^0.70` uses `barWidth` on `LineChartBarData`, NOT `strokeWidth`
 
+## Sideloading & Hot-Reload Iteration (Real Phone)
+Hot reload via `flutter run` is much faster than rebuilding + re-sideloading every change.
+The test device is a **Pixel 9a** (codename `tegu`).
+
+```bash
+export ANDROID_HOME=/home/mrguy/android-sdk
+export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64
+cd /home/mrguy/projects/flowcheck-app
+flutter run         # installs + launches, drops into interactive session
+```
+Inside the running session: **`r`** = hot reload (~200ms, preserves state), **`R`** = hot
+restart (~2s, resets state), **`q`** = quit.
+
+### First-time device-setup checklist
+If `adb devices` is empty or shows an error, walk this list:
+1. **Pass USB through VMware:** VM menu → Removable Devices → [phone] → Connect. Decline any
+   host-side "mount" prompts (we want raw USB, not MTP filesystem mount).
+2. **Enable USB debugging:** Phone → Settings → System → Developer options → toggle **USB
+   debugging** on. (If Developer options is missing: Settings → About phone → tap **Build
+   number** 7×.)
+3. **Replug after toggling.** Toggling alone doesn't re-enumerate the USB composite; you must
+   unplug and replug for the adb interface to be exposed. Diagnostic via `lsusb`:
+   - `18d1:4ee1` ("Nexus/Pixel Device (MTP)") = adb is NOT exposed.
+   - `18d1:4ee7` ("Nexus/Pixel Device (charging + debug)") = adb interface is up.
+4. **Accept the RSA prompt** on the phone: "Allow USB debugging from this computer?" → Allow
+   + Always allow from this computer.
+5. **Install udev rules** if `adb devices` shows `no permissions`:
+   `sudo apt install android-sdk-platform-tools-common`, then
+   `sudo udevadm control --reload-rules && sudo udevadm trigger`, then replug.
+
+`adb devices -l` states:
+- `no permissions` → udev rules missing (step 5).
+- `unauthorized` → udev rules OK, but RSA prompt not yet accepted (step 4).
+- `device` → fully ready.
+
+### One-shot install (no hot reload)
+```bash
+flutter build apk --debug
+adb install -r build/app/outputs/flutter-apk/app-debug.apk
+```
+
 ## What's NOT Done Yet
 1. Firebase service account JSON → place on VPS → set in API `.env` (server-side FCM send)
 2. Release APK signing setup (keystore + `android/key.properties` + gradle wiring)
 3. Current water-year data overlay on chart (needs new API endpoint)
 4. Play Store submission (icons, listing, privacy policy)
-5. Verify DNS + SSL is actually live for `flowcheck-api.3rdplaces.io` (default now points there)
+
+## Confirmed Working
+- Debug APK builds successfully and installs on the Pixel 9a via `adb install -r` ✓
+- `flowcheck-api.3rdplaces.io` reachable over HTTPS (server responds; 404 on `/` is normal
+  for a JSON API — TLS + DNS confirmed working) ✓
