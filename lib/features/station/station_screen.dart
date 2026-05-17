@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/models/station.dart';
 import '../../core/providers/stations_provider.dart';
 import '../../core/theme/app_theme.dart';
 import 'widgets/water_year_chart.dart';
@@ -92,7 +93,7 @@ class StationScreen extends ConsumerWidget {
 }
 
 class _MetadataFooter extends StatelessWidget {
-  final dynamic station;
+  final Station station;
   const _MetadataFooter({required this.station});
 
   @override
