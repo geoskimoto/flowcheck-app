@@ -27,11 +27,14 @@ class Station {
   });
 
   factory Station.fromJson(Map<String, dynamic> json) => Station(
-        stationNumber: json['station_number'] as String,
-        name: json['name'] as String,
-        latitude: (json['latitude'] as num).toDouble(),
-        longitude: (json['longitude'] as num).toDouble(),
-        state: json['state'] as String,
+        // Null-safe: the production API can return null for state (and
+        // historically other fields). A single null must not crash the
+        // whole map — degrade gracefully instead.
+        stationNumber: (json['station_number'] as String?) ?? '',
+        name: (json['name'] as String?) ?? 'Unknown station',
+        latitude: (json['latitude'] as num?)?.toDouble() ?? 0.0,
+        longitude: (json['longitude'] as num?)?.toDouble() ?? 0.0,
+        state: (json['state'] as String?) ?? '',
         isActive: json['is_active'] as bool? ?? true,
         currentDischargeCfs: (json['current_discharge_cfs'] as num?)?.toDouble(),
         percentileRank: (json['percentile_rank'] as num?)?.toDouble(),
