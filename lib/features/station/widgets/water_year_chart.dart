@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
+import '../../../core/models/current_water_year.dart';
 import '../../../core/models/forecast.dart';
 import '../../../core/models/water_year_stat.dart';
 
@@ -10,6 +11,7 @@ class WaterYearChart extends StatelessWidget {
   final String stationName;
   final double? currentPercentile;
   final Forecast? forecast;
+  final List<CurrentWyPoint> currentSeries;
 
   const WaterYearChart({
     super.key,
@@ -17,7 +19,14 @@ class WaterYearChart extends StatelessWidget {
     required this.stationName,
     this.currentPercentile,
     this.forecast,
+    this.currentSeries = const [],
   });
+
+  List<FlSpot> _currentSpots() {
+    if (currentSeries.isEmpty) return const [];
+    final pts = [...currentSeries]..sort((a, b) => a.dayOfWy.compareTo(b.dayOfWy));
+    return pts.map((p) => FlSpot(p.dayOfWy.toDouble(), p.discharge)).toList();
+  }
 
   // Day-of-water-year (Oct 1 = 1), mirroring the backend's
   // water_year_service so forecast points align with the stats x-axis.
@@ -55,10 +64,12 @@ class WaterYearChart extends StatelessWidget {
     }
 
     final forecastSpots = _forecastSpots();
+    final currentSpots = _currentSpots();
     final peak = [
       stats.map((s) => s.q90).reduce(max),
       if (forecastSpots.isNotEmpty)
         forecastSpots.map((s) => s.y).reduce(max),
+      if (currentSpots.isNotEmpty) currentSpots.map((s) => s.y).reduce(max),
     ].reduce(max);
     final maxVal = peak * 1.1;
     final minVal = 0.0;
@@ -138,13 +149,22 @@ class WaterYearChart extends StatelessWidget {
                     dotData: const FlDotData(show: false),
                     dashArray: [4, 4],
                   ),
-                  // NWRFC forecast (vermilion, solid) — appended last so the
-                  // betweenBarsData indices above are unaffected.
+                  // NWRFC forecast (vermilion, solid) — appended after the
+                  // bands so the betweenBarsData indices above are unaffected.
                   if (forecastSpots.isNotEmpty)
                     LineChartBarData(
                       spots: forecastSpots,
                       color: const Color(0xFFD55E00),
                       barWidth: 2.5,
+                      dotData: const FlDotData(show: false),
+                    ),
+                  // Current water year observed flow (bold blue) — the
+                  // primary series, drawn on top.
+                  if (currentSpots.isNotEmpty)
+                    LineChartBarData(
+                      spots: currentSpots,
+                      color: const Color(0xFF0072B2),
+                      barWidth: 3,
                       dotData: const FlDotData(show: false),
                     ),
                 ],
@@ -169,7 +189,10 @@ class WaterYearChart extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          _Legend(hasForecast: forecastSpots.isNotEmpty),
+          _Legend(
+            hasForecast: forecastSpots.isNotEmpty,
+            hasCurrent: currentSpots.isNotEmpty,
+          ),
         ],
       ),
     );
@@ -219,7 +242,8 @@ class WaterYearChart extends StatelessWidget {
 
 class _Legend extends StatelessWidget {
   final bool hasForecast;
-  const _Legend({this.hasForecast = false});
+  final bool hasCurrent;
+  const _Legend({this.hasForecast = false, this.hasCurrent = false});
 
   @override
   Widget build(BuildContext context) => Wrap(
@@ -231,6 +255,8 @@ class _Legend extends StatelessWidget {
           const _LegendItem(color: Color(0x66009E73), label: 'Normal (25–75th)'),
           const _LegendItem(color: Color(0x66E69F00), label: 'Elevated (75–90th)'),
           const _LegendItem(color: Color(0xFF009E73), label: 'Median', dashed: true),
+          if (hasCurrent)
+            const _LegendItem(color: Color(0xFF0072B2), label: 'Current water year'),
           if (hasForecast)
             const _LegendItem(color: Color(0xFFD55E00), label: 'NWRFC forecast'),
         ],

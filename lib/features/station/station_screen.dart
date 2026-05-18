@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -5,6 +6,24 @@ import '../../core/models/station.dart';
 import '../../core/providers/stations_provider.dart';
 import '../../core/theme/app_theme.dart';
 import 'widgets/water_year_chart.dart';
+
+/// Maps a water-year-stats fetch error to a user-facing message + whether
+/// retrying makes sense (404 = no data, permanent; 503 = transient).
+({String message, bool canRetry}) _statsErrorInfo(Object e) {
+  if (e is DioException) {
+    final code = e.response?.statusCode;
+    if (code == 404) {
+      return (message: 'No historical data for this station.', canRetry: false);
+    }
+    if (code == 503) {
+      return (
+        message: 'Water-year data is temporarily unavailable.',
+        canRetry: true
+      );
+    }
+  }
+  return (message: 'Water year chart unavailable for this station.', canRetry: true);
+}
 
 class StationScreen extends ConsumerWidget {
   final String stationNumber;
@@ -69,18 +88,38 @@ class StationScreen extends ConsumerWidget {
             Expanded(
               child: statsAsync.when(
                 loading: () => const Center(child: CircularProgressIndicator()),
-                error: (_, _s) => const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(24),
-                    child: Text('Water year chart unavailable for this station.', textAlign: TextAlign.center),
-                  ),
-                ),
+                error: (e, _) {
+                  final info = _statsErrorInfo(e);
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(info.message, textAlign: TextAlign.center),
+                          if (info.canRetry) ...[
+                            const SizedBox(height: 12),
+                            ElevatedButton(
+                              onPressed: () => ref.invalidate(
+                                  waterYearStatsProvider(stationNumber)),
+                              child: const Text('Retry'),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  );
+                },
                 data: (rawStats) => WaterYearChart(
                   statsJson: rawStats,
                   stationName: station.name,
                   currentPercentile: station.percentileRank,
                   forecast:
                       ref.watch(forecastProvider(stationNumber)).valueOrNull,
+                  currentSeries: ref
+                          .watch(currentWaterYearProvider(stationNumber))
+                          .valueOrNull ??
+                      const [],
                 ),
               ),
             ),
