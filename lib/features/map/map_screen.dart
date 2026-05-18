@@ -11,9 +11,9 @@ import 'widgets/station_bottom_sheet.dart';
 class MapScreen extends ConsumerWidget {
   const MapScreen({super.key});
 
-  // PNW bounding box center
-  static const _initialCenter = LatLng(46.5, -120.5);
-  static const _initialZoom = 6.5;
+  // Western US bounding box center (matches expanded backend coverage).
+  static const _initialCenter = LatLng(43.5, -116.0);
+  static const _initialZoom = 5.0;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -79,6 +79,14 @@ class _BaseMap extends StatelessWidget {
       );
 }
 
+String _conditionLabel(ConditionLevel level) => switch (level) {
+      ConditionLevel.unknown => 'Unknown',
+      ConditionLevel.low => 'Low',
+      ConditionLevel.normal => 'Normal',
+      ConditionLevel.elevated => 'Elevated',
+      ConditionLevel.flood => 'Flood',
+    };
+
 class _MapWithMarkers extends ConsumerStatefulWidget {
   final List<Station> stations;
   const _MapWithMarkers({required this.stations});
@@ -89,6 +97,37 @@ class _MapWithMarkers extends ConsumerStatefulWidget {
 
 class _MapWithMarkersState extends ConsumerState<_MapWithMarkers> {
   Station? _selected;
+  String _query = '';
+  final Set<String> _states = {};
+  final Set<ConditionLevel> _levels = {};
+  final TextEditingController _searchCtrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  List<String> get _availableStates =>
+      widget.stations.map((s) => s.state).toSet().toList()..sort();
+
+  List<Station> get _filtered {
+    final q = _query.trim().toLowerCase();
+    return widget.stations.where((s) {
+      if (q.isNotEmpty &&
+          !s.name.toLowerCase().contains(q) &&
+          !s.stationNumber.toLowerCase().contains(q)) {
+        return false;
+      }
+      if (_states.isNotEmpty && !_states.contains(s.state)) return false;
+      if (_levels.isNotEmpty && !_levels.contains(s.conditionLevel)) {
+        return false;
+      }
+      return true;
+    }).toList();
+  }
+
+  int get _activeFilterCount => _states.length + _levels.length;
 
   void _onMarkerTap(Station station) {
     setState(() => _selected = station);
@@ -107,10 +146,163 @@ class _MapWithMarkersState extends ConsumerState<_MapWithMarkers> {
     );
   }
 
+  void _openFilterSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (_) => StatefulBuilder(
+        builder: (ctx, setSheet) {
+          void toggleState(String s) => setSheet(() {
+                _states.contains(s) ? _states.remove(s) : _states.add(s);
+              });
+          void toggleLevel(ConditionLevel l) => setSheet(() {
+                _levels.contains(l) ? _levels.remove(l) : _levels.add(l);
+              });
+          return Padding(
+            padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text('Filters',
+                        style: Theme.of(ctx).textTheme.titleLarge),
+                    const Spacer(),
+                    TextButton(
+                      onPressed: () => setSheet(() {
+                        _states.clear();
+                        _levels.clear();
+                      }),
+                      child: const Text('Clear all'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text('State', style: Theme.of(ctx).textTheme.titleSmall),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  children: _availableStates
+                      .map((s) => FilterChip(
+                            label: Text(s),
+                            selected: _states.contains(s),
+                            onSelected: (_) => toggleState(s),
+                          ))
+                      .toList(),
+                ),
+                const SizedBox(height: 16),
+                Text('Condition',
+                    style: Theme.of(ctx).textTheme.titleSmall),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  children: ConditionLevel.values
+                      .map((l) => FilterChip(
+                            avatar: CircleAvatar(
+                                backgroundColor: AppTheme.conditionColor(l),
+                                radius: 7),
+                            label: Text(_conditionLabel(l)),
+                            selected: _levels.contains(l),
+                            onSelected: (_) => toggleLevel(l),
+                          ))
+                      .toList(),
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text('Done'),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    ).whenComplete(() => setState(() {}));
+  }
+
   @override
   Widget build(BuildContext context) {
-    final markers = widget.stations.map((s) => _buildMarker(s)).toList();
-    return _BaseMap(markers: markers);
+    final filtered = _filtered;
+    final markers = filtered.map((s) => _buildMarker(s)).toList();
+    final theme = Theme.of(context);
+
+    return Stack(
+      children: [
+        _BaseMap(markers: markers),
+        SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+            child: Column(
+              children: [
+                Material(
+                  elevation: 3,
+                  borderRadius: BorderRadius.circular(12),
+                  child: Row(
+                    children: [
+                      const SizedBox(width: 12),
+                      const Icon(Icons.search, size: 20),
+                      Expanded(
+                        child: TextField(
+                          controller: _searchCtrl,
+                          decoration: const InputDecoration(
+                            hintText: 'Search site ID or name',
+                            border: InputBorder.none,
+                            contentPadding: EdgeInsets.symmetric(
+                                vertical: 14, horizontal: 8),
+                          ),
+                          onChanged: (v) => setState(() => _query = v),
+                        ),
+                      ),
+                      if (_query.isNotEmpty)
+                        IconButton(
+                          icon: const Icon(Icons.clear, size: 20),
+                          onPressed: () {
+                            _searchCtrl.clear();
+                            setState(() => _query = '');
+                          },
+                        ),
+                      Badge(
+                        isLabelVisible: _activeFilterCount > 0,
+                        label: Text('$_activeFilterCount'),
+                        child: IconButton(
+                          icon: const Icon(Icons.tune),
+                          tooltip: 'Filters',
+                          onPressed: _openFilterSheet,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                    ],
+                  ),
+                ),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Container(
+                    margin: const EdgeInsets.only(top: 8),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surface.withValues(alpha: 0.9),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      '${filtered.length} of ${widget.stations.length} gauges',
+                      style: theme.textTheme.labelSmall,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
   }
 
   Marker _buildMarker(Station station) {
