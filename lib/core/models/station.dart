@@ -9,6 +9,8 @@ class Station {
   final double? percentileRank;
   final String? conditionBand;
   final String conditionLabel;
+  // Detail-only field (present on /stations/{id}, null on the list endpoint).
+  final String? basin;
 
   const Station({
     required this.stationNumber,
@@ -21,6 +23,7 @@ class Station {
     this.percentileRank,
     this.conditionBand,
     this.conditionLabel = 'Unknown',
+    this.basin,
   });
 
   factory Station.fromJson(Map<String, dynamic> json) => Station(
@@ -34,6 +37,7 @@ class Station {
         percentileRank: (json['percentile_rank'] as num?)?.toDouble(),
         conditionBand: json['condition_band'] as String?,
         conditionLabel: json['condition_label'] as String? ?? 'Unknown',
+        basin: json['basin'] as String?,
       );
 
   ConditionLevel get conditionLevel {
