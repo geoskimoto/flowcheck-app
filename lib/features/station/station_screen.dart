@@ -79,6 +79,8 @@ class StationScreen extends ConsumerWidget {
                   statsJson: rawStats,
                   stationName: station.name,
                   currentPercentile: station.percentileRank,
+                  forecast:
+                      ref.watch(forecastProvider(stationNumber)).valueOrNull,
                 ),
               ),
             ),

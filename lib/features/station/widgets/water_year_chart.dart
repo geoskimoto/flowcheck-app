@@ -2,19 +2,46 @@ import 'dart:math';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
+import '../../../core/models/forecast.dart';
 import '../../../core/models/water_year_stat.dart';
 
 class WaterYearChart extends StatelessWidget {
   final List<dynamic> statsJson;
   final String stationName;
   final double? currentPercentile;
+  final Forecast? forecast;
 
   const WaterYearChart({
     super.key,
     required this.statsJson,
     required this.stationName,
     this.currentPercentile,
+    this.forecast,
   });
+
+  // Day-of-water-year (Oct 1 = 1), mirroring the backend's
+  // water_year_service so forecast points align with the stats x-axis.
+  static int _dayOfWy(DateTime d) {
+    final wyStartYear = d.month >= 10 ? d.year : d.year - 1;
+    final wyStart = DateTime.utc(wyStartYear, 10, 1);
+    return d.toUtc().difference(wyStart).inDays + 1;
+  }
+
+  // Forecast points -> spots, truncated at a water-year wrap (a forecast
+  // spanning Sep 30 -> Oct 1 would otherwise jump backwards on the x-axis).
+  List<FlSpot> _forecastSpots() {
+    final f = forecast;
+    if (f == null || f.points.isEmpty) return const [];
+    final spots = <FlSpot>[];
+    int? prev;
+    for (final p in f.points) {
+      final x = _dayOfWy(p.date);
+      if (prev != null && x < prev) break;
+      prev = x;
+      spots.add(FlSpot(x.toDouble(), p.value));
+    }
+    return spots;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -27,7 +54,13 @@ class WaterYearChart extends StatelessWidget {
       return const Center(child: Text('No historical data available.'));
     }
 
-    final maxVal = stats.map((s) => s.q90).reduce(max) * 1.1;
+    final forecastSpots = _forecastSpots();
+    final peak = [
+      stats.map((s) => s.q90).reduce(max),
+      if (forecastSpots.isNotEmpty)
+        forecastSpots.map((s) => s.y).reduce(max),
+    ].reduce(max);
+    final maxVal = peak * 1.1;
     final minVal = 0.0;
 
     // Build spot lists for each band
@@ -105,6 +138,15 @@ class WaterYearChart extends StatelessWidget {
                     dotData: const FlDotData(show: false),
                     dashArray: [4, 4],
                   ),
+                  // NWRFC forecast (vermilion, solid) — appended last so the
+                  // betweenBarsData indices above are unaffected.
+                  if (forecastSpots.isNotEmpty)
+                    LineChartBarData(
+                      spots: forecastSpots,
+                      color: const Color(0xFFD55E00),
+                      barWidth: 2.5,
+                      dotData: const FlDotData(show: false),
+                    ),
                 ],
                 betweenBarsData: [
                   // Q10–Q25 fill
@@ -127,7 +169,7 @@ class WaterYearChart extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          _Legend(),
+          _Legend(hasForecast: forecastSpots.isNotEmpty),
         ],
       ),
     );
@@ -176,16 +218,21 @@ class WaterYearChart extends StatelessWidget {
 }
 
 class _Legend extends StatelessWidget {
+  final bool hasForecast;
+  const _Legend({this.hasForecast = false});
+
   @override
   Widget build(BuildContext context) => Wrap(
         spacing: 12,
         runSpacing: 4,
         alignment: WrapAlignment.center,
-        children: const [
-          _LegendItem(color: Color(0x6656B4E9), label: 'Low (10–25th)'),
-          _LegendItem(color: Color(0x66009E73), label: 'Normal (25–75th)'),
-          _LegendItem(color: Color(0x66E69F00), label: 'Elevated (75–90th)'),
-          _LegendItem(color: Color(0xFF009E73), label: 'Median', dashed: true),
+        children: [
+          const _LegendItem(color: Color(0x6656B4E9), label: 'Low (10–25th)'),
+          const _LegendItem(color: Color(0x66009E73), label: 'Normal (25–75th)'),
+          const _LegendItem(color: Color(0x66E69F00), label: 'Elevated (75–90th)'),
+          const _LegendItem(color: Color(0xFF009E73), label: 'Median', dashed: true),
+          if (hasForecast)
+            const _LegendItem(color: Color(0xFFD55E00), label: 'NWRFC forecast'),
         ],
       );
 }
