@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:flutter_map_marker_cluster/flutter_map_marker_cluster.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 
@@ -74,7 +75,40 @@ class _BaseMap extends StatelessWidget {
             urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
             userAgentPackageName: 'com.StreamCast',
           ),
-          MarkerLayer(markers: markers),
+          MarkerClusterLayerWidget(
+            options: MarkerClusterLayerOptions(
+              markers: markers,
+              maxClusterRadius: 50,
+              size: const Size(44, 44),
+              padding: const EdgeInsets.all(50),
+              disableClusteringAtZoom: 12,
+              // Let each Marker's own GestureDetector handle taps so the
+              // existing tap -> station bottom sheet still works.
+              markerChildBehavior: true,
+              builder: (context, clusterMarkers) {
+                final scheme = Theme.of(context).colorScheme;
+                return Container(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: scheme.primary,
+                    border: Border.all(color: Colors.white, width: 2),
+                    boxShadow: const [
+                      BoxShadow(color: Colors.black26, blurRadius: 4),
+                    ],
+                  ),
+                  child: Center(
+                    child: Text(
+                      '${clusterMarkers.length}',
+                      style: TextStyle(
+                        color: scheme.onPrimary,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
         ],
       );
 }
