@@ -59,22 +59,29 @@ class _BaseMap extends StatelessWidget {
   final List<Marker> markers;
   const _BaseMap({required this.markers});
 
+  // Cluster only when the map is busy; below this many visible markers,
+  // show them individually (no grouping).
+  static const _clusterThreshold = 1000;
+
   @override
-  Widget build(BuildContext context) => FlutterMap(
-        options: const MapOptions(
-          initialCenter: MapScreen._initialCenter,
-          initialZoom: MapScreen._initialZoom,
-          minZoom: 4,
-          maxZoom: 16,
-          interactionOptions: InteractionOptions(
-            flags: InteractiveFlag.all,
-          ),
+  Widget build(BuildContext context) {
+    final cluster = markers.length >= _clusterThreshold;
+    return FlutterMap(
+      options: const MapOptions(
+        initialCenter: MapScreen._initialCenter,
+        initialZoom: MapScreen._initialZoom,
+        minZoom: 4,
+        maxZoom: 16,
+        interactionOptions: InteractionOptions(
+          flags: InteractiveFlag.all,
         ),
-        children: [
-          TileLayer(
-            urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-            userAgentPackageName: 'com.StreamCast',
-          ),
+      ),
+      children: [
+        TileLayer(
+          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+          userAgentPackageName: 'com.StreamCast',
+        ),
+        if (cluster)
           MarkerClusterLayerWidget(
             options: MarkerClusterLayerOptions(
               markers: markers,
@@ -108,9 +115,12 @@ class _BaseMap extends StatelessWidget {
                 );
               },
             ),
-          ),
-        ],
-      );
+          )
+        else
+          MarkerLayer(markers: markers),
+      ],
+    );
+  }
 }
 
 String _conditionLabel(ConditionLevel level) => switch (level) {
