@@ -4,7 +4,16 @@ import 'package:flutter/material.dart';
 
 import '../../../core/models/current_water_year.dart';
 import '../../../core/models/forecast.dart';
+import '../../../core/models/station.dart';
 import '../../../core/models/water_year_stat.dart';
+import '../../../core/theme/app_theme.dart';
+
+// Band colors reuse the map's percentile palette so the chart matches
+// the marker colors. Q10–Q25 = low-flow region, Q25–Q75 = mid,
+// Q75–Q90 = high-flow region.
+final Color _bandLowColor = AppTheme.conditionColor(ConditionLevel.low);
+final Color _bandMidColor = AppTheme.conditionColor(ConditionLevel.normal);
+final Color _bandHighColor = AppTheme.conditionColor(ConditionLevel.elevated);
 
 enum _Scale { waterYear, month1, month3, forecast }
 
@@ -207,12 +216,15 @@ class _WaterYearChartState extends State<WaterYearChart> {
                   topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
                 ),
                 lineBarsData: [
-                  _bandLine(q10Spots, const Color(0x4456B4E9)),
-                  _bandLine(q25Spots, const Color(0x4456B4E9), belowColor: const Color(0x2256B4E9)),
-                  _bandLine(q25Spots, const Color(0x44009E73)),
-                  _bandLine(q75Spots, const Color(0x44009E73), belowColor: const Color(0x22009E73)),
-                  _bandLine(q75Spots, const Color(0x44E69F00)),
-                  _bandLine(q90Spots, const Color(0x44E69F00), belowColor: const Color(0x22E69F00)),
+                  _bandLine(q10Spots, _bandLowColor.withValues(alpha: 0.27)),
+                  _bandLine(q25Spots, _bandLowColor.withValues(alpha: 0.27),
+                      belowColor: _bandLowColor.withValues(alpha: 0.13)),
+                  _bandLine(q25Spots, _bandMidColor.withValues(alpha: 0.27)),
+                  _bandLine(q75Spots, _bandMidColor.withValues(alpha: 0.27),
+                      belowColor: _bandMidColor.withValues(alpha: 0.13)),
+                  _bandLine(q75Spots, _bandHighColor.withValues(alpha: 0.27)),
+                  _bandLine(q90Spots, _bandHighColor.withValues(alpha: 0.27),
+                      belowColor: _bandHighColor.withValues(alpha: 0.13)),
                   // Median line
                   LineChartBarData(
                     spots: q50Spots,
@@ -240,9 +252,9 @@ class _WaterYearChartState extends State<WaterYearChart> {
                     ),
                 ],
                 betweenBarsData: [
-                  BetweenBarsData(fromIndex: 0, toIndex: 1, color: const Color(0x2256B4E9)),
-                  BetweenBarsData(fromIndex: 2, toIndex: 3, color: const Color(0x2200A073)),
-                  BetweenBarsData(fromIndex: 4, toIndex: 5, color: const Color(0x22E69F00)),
+                  BetweenBarsData(fromIndex: 0, toIndex: 1, color: _bandLowColor.withValues(alpha: 0.13)),
+                  BetweenBarsData(fromIndex: 2, toIndex: 3, color: _bandMidColor.withValues(alpha: 0.13)),
+                  BetweenBarsData(fromIndex: 4, toIndex: 5, color: _bandHighColor.withValues(alpha: 0.13)),
                 ],
                 lineTouchData: LineTouchData(
                   touchTooltipData: LineTouchTooltipData(
@@ -357,10 +369,16 @@ class _Legend extends StatelessWidget {
         runSpacing: 4,
         alignment: WrapAlignment.center,
         children: [
-          const _LegendItem(color: Color(0x6656B4E9), label: 'Low (10–25th)'),
-          const _LegendItem(color: Color(0x66009E73), label: 'Normal (25–75th)'),
-          const _LegendItem(color: Color(0x66E69F00), label: 'Elevated (75–90th)'),
-          const _LegendItem(color: Color(0xFF009E73), label: 'Median', dashed: true),
+          _LegendItem(
+              color: _bandLowColor.withValues(alpha: 0.5),
+              label: 'Low (10–25th)'),
+          _LegendItem(
+              color: _bandMidColor.withValues(alpha: 0.5),
+              label: 'Normal (25–75th)'),
+          _LegendItem(
+              color: _bandHighColor.withValues(alpha: 0.5),
+              label: 'Elevated (75–90th)'),
+          _LegendItem(color: _bandMidColor, label: 'Median', dashed: true),
           if (hasCurrent)
             const _LegendItem(color: Color(0xFF0072B2), label: 'Current water year'),
           if (hasForecast)
