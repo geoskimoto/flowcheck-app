@@ -11,6 +11,8 @@ class Station {
   final String conditionLabel;
   // Detail-only field (present on /stations/{id}, null on the list endpoint).
   final String? basin;
+  // True if the backend has an NWRFC forecast mapping for this station.
+  final bool hasForecast;
 
   const Station({
     required this.stationNumber,
@@ -24,6 +26,7 @@ class Station {
     this.conditionBand,
     this.conditionLabel = 'Unknown',
     this.basin,
+    this.hasForecast = false,
   });
 
   factory Station.fromJson(Map<String, dynamic> json) => Station(
@@ -41,6 +44,7 @@ class Station {
         conditionBand: json['condition_band'] as String?,
         conditionLabel: json['condition_label'] as String? ?? 'Unknown',
         basin: json['basin'] as String?,
+        hasForecast: json['has_forecast'] as bool? ?? false,
       );
 
   ConditionLevel get conditionLevel {
