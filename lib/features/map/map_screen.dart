@@ -135,6 +135,8 @@ class _MapWithMarkersState extends ConsumerState<_MapWithMarkers> {
   String _query = '';
   final Set<String> _states = {};
   final Set<ConditionLevel> _levels = {};
+  // Most gauges have no percentile data ("Unknown"); hide them by default.
+  bool _showUnknown = false;
   final TextEditingController _searchCtrl = TextEditingController();
 
   @override
@@ -152,6 +154,9 @@ class _MapWithMarkersState extends ConsumerState<_MapWithMarkers> {
       if (q.isNotEmpty &&
           !s.name.toLowerCase().contains(q) &&
           !s.stationNumber.toLowerCase().contains(q)) {
+        return false;
+      }
+      if (!_showUnknown && s.conditionLevel == ConditionLevel.unknown) {
         return false;
       }
       if (_states.isNotEmpty && !_states.contains(s.state)) return false;
@@ -209,6 +214,7 @@ class _MapWithMarkersState extends ConsumerState<_MapWithMarkers> {
                       onPressed: () => setSheet(() {
                         _states.clear();
                         _levels.clear();
+                        _showUnknown = false; // back to default
                       }),
                       child: const Text('Clear all'),
                     ),
@@ -236,6 +242,7 @@ class _MapWithMarkersState extends ConsumerState<_MapWithMarkers> {
                   spacing: 8,
                   runSpacing: 4,
                   children: ConditionLevel.values
+                      .where((l) => l != ConditionLevel.unknown)
                       .map((l) => FilterChip(
                             avatar: CircleAvatar(
                                 backgroundColor: AppTheme.conditionColor(l),
@@ -245,6 +252,15 @@ class _MapWithMarkersState extends ConsumerState<_MapWithMarkers> {
                             onSelected: (_) => toggleLevel(l),
                           ))
                       .toList(),
+                ),
+                const SizedBox(height: 8),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  dense: true,
+                  title: const Text('Show unknown-condition gauges'),
+                  subtitle: const Text('Gauges without current percentile data'),
+                  value: _showUnknown,
+                  onChanged: (v) => setSheet(() => _showUnknown = v),
                 ),
                 const SizedBox(height: 20),
                 SizedBox(
