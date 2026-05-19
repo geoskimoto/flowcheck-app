@@ -85,6 +85,28 @@ class _WaterYearChartState extends State<WaterYearChart> {
     final double today =
         _dayOfWy(DateTime.now()).toDouble().clamp(1.0, maxWy).toDouble();
     final hasForecast = forecastSpots.isNotEmpty;
+    // Forecast/current are appended after the 7 band+median bars (0–6),
+    // conditionally — compute their bar indices for tooltip labelling.
+    final fcIndex = hasForecast ? 7 : -1;
+    final curIndex =
+        currentSpots.isNotEmpty ? (hasForecast ? 8 : 7) : -1;
+    String? seriesLabel(int barIndex) {
+      switch (barIndex) {
+        case 0:
+          return '10th pct';
+        case 1:
+          return '25th pct';
+        case 3:
+          return '75th pct';
+        case 5:
+          return '90th pct';
+        case 6:
+          return 'Median';
+      }
+      if (barIndex == fcIndex) return 'Forecast';
+      if (barIndex == curIndex) return 'Current WY';
+      return null; // duplicate band lines (2,4) — hide from tooltip
+    }
 
     // X-domain for the selected scale.
     double clampX(double v) => v.clamp(1.0, maxWy).toDouble();
@@ -225,10 +247,14 @@ class _WaterYearChartState extends State<WaterYearChart> {
                 lineTouchData: LineTouchData(
                   touchTooltipData: LineTouchTooltipData(
                     getTooltipColor: (_) => Colors.black87,
-                    getTooltipItems: (spots) => spots.map((s) => LineTooltipItem(
-                      '${_formatCfs(s.y)} CFS',
-                      const TextStyle(color: Colors.white, fontSize: 11),
-                    )).toList(),
+                    getTooltipItems: (spots) => spots.map((s) {
+                      final name = seriesLabel(s.barIndex);
+                      if (name == null) return null;
+                      return LineTooltipItem(
+                        '$name: ${_formatCfs(s.y)} CFS',
+                        const TextStyle(color: Colors.white, fontSize: 11),
+                      );
+                    }).toList(),
                   ),
                 ),
               ),
@@ -312,8 +338,8 @@ class _ScaleSelector extends StatelessWidget {
       alignment: WrapAlignment.center,
       children: [
         chip('Water Year', _Scale.waterYear),
-        chip('± 1 mo', _Scale.month1),
         chip('± 3 mo', _Scale.month3),
+        chip('± 1 mo', _Scale.month1),
         chip('Forecast', _Scale.forecast, enabled: forecastEnabled),
       ],
     );
