@@ -47,10 +47,13 @@ class Station {
     final pct = percentileRank;
     if (pct == null) return ConditionLevel.unknown;
     if (pct < 25) return ConditionLevel.low;
+    if (pct < 50) return ConditionLevel.belowNormal;
     if (pct < 75) return ConditionLevel.normal;
     if (pct < 95) return ConditionLevel.elevated;
     return ConditionLevel.flood;
   }
 }
 
-enum ConditionLevel { unknown, low, normal, elevated, flood }
+// Ordered low→high flow. Colors are assigned cool = high water
+// (see AppTheme.conditionColor).
+enum ConditionLevel { unknown, low, belowNormal, normal, elevated, flood }

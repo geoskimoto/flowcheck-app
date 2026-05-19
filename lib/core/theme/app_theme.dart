@@ -16,19 +16,23 @@ class AppTheme {
       );
 
   // Colorblind-safe condition palette (Okabe-Ito inspired)
+  // Cool = high water, warm = low water (flipped per product decision).
   static Color conditionColor(ConditionLevel level) => switch (level) {
-        ConditionLevel.unknown => const Color(0xFF9E9E9E),
-        ConditionLevel.low => const Color(0xFF56B4E9),     // sky blue
-        ConditionLevel.normal => const Color(0xFF009E73),  // teal green
-        ConditionLevel.elevated => const Color(0xFFE69F00), // amber
-        ConditionLevel.flood => const Color(0xFFD55E00),   // vermilion
+        ConditionLevel.unknown => const Color(0xFF9E9E9E),     // grey
+        ConditionLevel.low => const Color(0xFFD55E00),         // vermilion (low/drought)
+        ConditionLevel.belowNormal => const Color(0xFFE69F00), // amber
+        ConditionLevel.normal => const Color(0xFF009E73),      // teal green
+        ConditionLevel.elevated => const Color(0xFF56B4E9),    // sky blue
+        ConditionLevel.flood => const Color(0xFF0072B2),       // deep blue (high/flood)
       };
 
   static Color conditionColorFromBand(String? band) => switch (band) {
-        'p0_4' || 'p5_10' => conditionColor(ConditionLevel.low),
-        'p11_25' => conditionColor(ConditionLevel.low),
-        'p26_50' || 'p51_75' => conditionColor(ConditionLevel.normal),
-        'p76_100' => conditionColor(ConditionLevel.elevated),
+        'p0_4' || 'p5_10' || 'p11_25' => conditionColor(ConditionLevel.low),
+        'p26_50' => conditionColor(ConditionLevel.belowNormal),
+        'p51_75' => conditionColor(ConditionLevel.normal),
+        'p76_85' || 'p86_90' || 'p91_95' || 'p76_100' =>
+          conditionColor(ConditionLevel.elevated),
+        'p96_98' || 'p99_100' => conditionColor(ConditionLevel.flood),
         _ => conditionColor(ConditionLevel.unknown),
       };
 

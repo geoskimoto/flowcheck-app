@@ -116,6 +116,7 @@ class _BaseMap extends StatelessWidget {
 String _conditionLabel(ConditionLevel level) => switch (level) {
       ConditionLevel.unknown => 'Unknown',
       ConditionLevel.low => 'Low',
+      ConditionLevel.belowNormal => 'Below normal',
       ConditionLevel.normal => 'Normal',
       ConditionLevel.elevated => 'Elevated',
       ConditionLevel.flood => 'Flood',
