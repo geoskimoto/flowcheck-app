@@ -147,6 +147,8 @@ class _MapWithMarkersState extends ConsumerState<_MapWithMarkers> {
   final Set<ConditionLevel> _levels = {};
   // Most gauges have no percentile data ("Unknown"); hide them by default.
   bool _showUnknown = false;
+  // Show only gauges that have an NWRFC forecast (on by default).
+  bool _onlyForecast = true;
   final TextEditingController _searchCtrl = TextEditingController();
 
   @override
@@ -160,12 +162,18 @@ class _MapWithMarkersState extends ConsumerState<_MapWithMarkers> {
 
   List<Station> get _filtered {
     final q = _query.trim().toLowerCase();
+    // Guard: only apply the forecast filter if the API actually reports
+    // the flag (an un-updated deployed API returns it for none — don't
+    // blank the whole map in that case).
+    final forecastFilterActive =
+        _onlyForecast && widget.stations.any((s) => s.hasForecast);
     return widget.stations.where((s) {
       if (q.isNotEmpty &&
           !s.name.toLowerCase().contains(q) &&
           !s.stationNumber.toLowerCase().contains(q)) {
         return false;
       }
+      if (forecastFilterActive && !s.hasForecast) return false;
       if (!_showUnknown && s.conditionLevel == ConditionLevel.unknown) {
         return false;
       }
@@ -225,6 +233,7 @@ class _MapWithMarkersState extends ConsumerState<_MapWithMarkers> {
                         _states.clear();
                         _levels.clear();
                         _showUnknown = false; // back to default
+                        _onlyForecast = true; // back to default
                       }),
                       child: const Text('Clear all'),
                     ),
@@ -264,6 +273,14 @@ class _MapWithMarkersState extends ConsumerState<_MapWithMarkers> {
                       .toList(),
                 ),
                 const SizedBox(height: 8),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  dense: true,
+                  title: const Text('Only stations with forecasts'),
+                  subtitle: const Text('Gauges that have an NWRFC forecast'),
+                  value: _onlyForecast,
+                  onChanged: (v) => setSheet(() => _onlyForecast = v),
+                ),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
                   dense: true,
