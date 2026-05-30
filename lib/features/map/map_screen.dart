@@ -145,8 +145,12 @@ class _MapWithMarkersState extends ConsumerState<_MapWithMarkers> {
   String _query = '';
   final Set<String> _states = {};
   final Set<ConditionLevel> _levels = {};
-  // Most gauges have no percentile data ("Unknown"); hide them by default.
-  bool _showUnknown = false;
+  // Hide gauges that haven't reported recently by default. This is a
+  // far more stable freshness signal than "has a percentile" (which
+  // depends on StreamflowOps' brittle precompute pipeline). A gauge
+  // that's reporting but happens to have no current percentile shows
+  // as a grey marker rather than disappearing.
+  bool _showInactive = false;
   // Show only gauges that have an NWRFC forecast (on by default).
   bool _onlyForecast = true;
   final TextEditingController _searchCtrl = TextEditingController();
@@ -162,11 +166,13 @@ class _MapWithMarkersState extends ConsumerState<_MapWithMarkers> {
 
   List<Station> get _filtered {
     final q = _query.trim().toLowerCase();
-    // Guard: only apply the forecast filter if the API actually reports
-    // the flag (an un-updated deployed API returns it for none — don't
-    // blank the whole map in that case).
+    // Guards: only apply the forecast / activity filters if the API
+    // actually reports the underlying fields. An un-updated deployed API
+    // returns them for none — don't blank the whole map in that case.
     final forecastFilterActive =
         _onlyForecast && widget.stations.any((s) => s.hasForecast);
+    final activityFilterActive = !_showInactive &&
+        widget.stations.any((s) => s.lastObservationDate != null);
     return widget.stations.where((s) {
       if (q.isNotEmpty &&
           !s.name.toLowerCase().contains(q) &&
@@ -174,9 +180,7 @@ class _MapWithMarkersState extends ConsumerState<_MapWithMarkers> {
         return false;
       }
       if (forecastFilterActive && !s.hasForecast) return false;
-      if (!_showUnknown && s.conditionLevel == ConditionLevel.unknown) {
-        return false;
-      }
+      if (activityFilterActive && !s.isRecentlyActive()) return false;
       if (_states.isNotEmpty && !_states.contains(s.state)) return false;
       if (_levels.isNotEmpty && !_levels.contains(s.conditionLevel)) {
         return false;
@@ -232,7 +236,7 @@ class _MapWithMarkersState extends ConsumerState<_MapWithMarkers> {
                       onPressed: () => setSheet(() {
                         _states.clear();
                         _levels.clear();
-                        _showUnknown = false; // back to default
+                        _showInactive = false; // back to default
                         _onlyForecast = true; // back to default
                       }),
                       child: const Text('Clear all'),
@@ -284,10 +288,11 @@ class _MapWithMarkersState extends ConsumerState<_MapWithMarkers> {
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
                   dense: true,
-                  title: const Text('Show unknown-condition gauges'),
-                  subtitle: const Text('Gauges without current percentile data'),
-                  value: _showUnknown,
-                  onChanged: (v) => setSheet(() => _showUnknown = v),
+                  title: const Text('Show inactive gauges'),
+                  subtitle: const Text(
+                      "Gauges that haven't reported in the last 14 days"),
+                  value: _showInactive,
+                  onChanged: (v) => setSheet(() => _showInactive = v),
                 ),
                 const SizedBox(height: 20),
                 SizedBox(

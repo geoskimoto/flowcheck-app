@@ -13,6 +13,8 @@ class Station {
   final String? basin;
   // True if the backend has an NWRFC forecast mapping for this station.
   final bool hasForecast;
+  // ISO date (YYYY-MM-DD) of the most recent observation upstream has.
+  final String? lastObservationDate;
 
   const Station({
     required this.stationNumber,
@@ -27,7 +29,21 @@ class Station {
     this.conditionLabel = 'Unknown',
     this.basin,
     this.hasForecast = false,
+    this.lastObservationDate,
   });
+
+  /// Recently active = upstream has an observation within [windowDays].
+  /// Forecast stations are treated as active by convention (StreamflowOps is
+  /// actively tracking them) so the only-forecast filter never drops them
+  /// even if their last_observation_date is missing.
+  bool isRecentlyActive({int windowDays = 14}) {
+    if (hasForecast) return true;
+    final iso = lastObservationDate;
+    if (iso == null || iso.isEmpty) return false;
+    final d = DateTime.tryParse(iso);
+    if (d == null) return false;
+    return DateTime.now().difference(d).inDays.abs() <= windowDays;
+  }
 
   factory Station.fromJson(Map<String, dynamic> json) => Station(
         // Null-safe: the production API can return null for state (and
@@ -45,6 +61,7 @@ class Station {
         conditionLabel: json['condition_label'] as String? ?? 'Unknown',
         basin: json['basin'] as String?,
         hasForecast: json['has_forecast'] as bool? ?? false,
+        lastObservationDate: json['last_observation_date'] as String?,
       );
 
   ConditionLevel get conditionLevel {
